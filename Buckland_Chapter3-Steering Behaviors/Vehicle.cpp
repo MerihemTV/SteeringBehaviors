@@ -60,7 +60,7 @@ Vehicle::~Vehicle()
 //
 //  Updates the vehicle's position from a series of steering behaviors
 //------------------------------------------------------------------------
-void Vehicle::Update(double time_elapsed)
+void Vehicle::Update(double time_elapsed, bool v_flocking)
 {    
   //update the time elapsed
   m_dTimeElapsed = time_elapsed;
@@ -69,7 +69,42 @@ void Vehicle::Update(double time_elapsed)
   //in this method
   Vector2D OldPos = Pos();
 
+  if(v_flocking)
+  {
+	  Steering()->PursuitOff();
+	  Steering()->EvadeOff();
+	  Steering()->FlockingOff();
 
+	  std::vector<Vehicle*> allVehicles = m_pWorld->Agents();
+
+	  double closestDistance = DBL_MAX;
+	  Vehicle* closestVehicle;
+	  for (int i = 0; i < Prm.NumAgents; ++i)
+	  {
+		  if (allVehicles.at(i) != this)
+		  {
+			  double distance = allVehicles.at(i)->Pos().Distance(this->Pos());
+			  if (distance < closestDistance)
+			  {
+				  closestDistance = distance;
+				  closestVehicle = allVehicles.at(i);
+			  }
+
+		  }
+	  }
+	  if (closestDistance > 50)//value above which we consider the vehicle is too far
+	  {
+		  Steering()->PursuitOn(closestVehicle);
+	  }
+	  if (closestDistance < 20)//value below which we consider the vehicle is too close
+	  {
+		  Steering()->EvadeOn(closestVehicle);
+	  }
+	  if (closestDistance <= 50 && closestDistance >= 20)
+	  {
+		  Steering()->FlockingOn();
+	  }
+  }
   Vector2D SteeringForce;
 
   //calculate the combined force from each steering behavior in the 

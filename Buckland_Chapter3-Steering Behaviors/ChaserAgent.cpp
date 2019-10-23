@@ -21,6 +21,6 @@ ChaserAgent::ChaserAgent(GameWorld* world,
 									scale),
 							m_pLeaderAgent(leader)
 {
-	Steering()->OffsetPursuitOn(leader, Vector2D(0.001,0.001));
+	Steering()->OffsetPursuitOn(leader, Vector2D(-25,0));
 	Steering()->SeparationOn();
 }

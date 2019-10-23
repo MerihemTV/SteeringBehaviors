@@ -79,7 +79,7 @@ public:
   ~Vehicle();
 
   //updates the vehicle's position and orientation
-  void        Update(double time_elapsed);
+  void        Update(double time_elapsed, bool v_flocking);
 
   void        Render();
 

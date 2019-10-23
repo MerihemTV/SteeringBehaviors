@@ -21,6 +21,7 @@
 #include "BaseGameEntity.h"
 #include "EntityFunctionTemplates.h"
 #include "vehicle.h"
+#include "LeaderAgent.h"
 
 
 class Obstacle;
@@ -37,6 +38,7 @@ private:
 
   //a container of all the moving entities
   std::vector<Vehicle*>         m_Vehicles;
+  LeaderAgent*					m_LeaderAgent;
 
   //any obstacles
   std::vector<BaseGameEntity*>  m_Obstacles;
@@ -74,6 +76,7 @@ private:
   bool  m_bRenderNeighbors;
   bool  m_bViewKeys;
   bool  m_bShowCellSpaceInfo;
+  int  m_bcontrol;
 
 
   void CreateObstacles();

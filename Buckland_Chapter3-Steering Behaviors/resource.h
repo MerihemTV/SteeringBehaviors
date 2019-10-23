@@ -18,6 +18,10 @@
 #define ID_VIEW_FPS                     40013
 #define ID_MENU_SMOOTHING               40014
 #define IDM_PARTITION_VIEW_NEIGHBORS    40015
+#define IDR_CONTROL_LEADER			    40016
+#define IDR_V_FLOCKING				    40017
+#define IDR_LEADER_WANDERING			40018
+
 
 // Next default values for new objects
 // 

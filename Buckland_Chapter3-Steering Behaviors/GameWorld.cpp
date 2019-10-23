@@ -41,7 +41,8 @@ GameWorld::GameWorld(int cx, int cy):
             m_pPath(NULL),
             m_bRenderNeighbors(false),
             m_bViewKeys(false),
-            m_bShowCellSpaceInfo(false)
+            m_bShowCellSpaceInfo(false),
+			m_bcontrol(0)
 {
 
   //setup the spatial subdivision class
@@ -51,7 +52,8 @@ GameWorld::GameWorld(int cx, int cy):
   m_pPath = new Path(5, border, border, cx-border, cy-border, true); 
 
   //setup the leader agent
-  Vector2D LeaderSpawnPos = Vector2D(cx / 2.0 + RandomClamped() * cx / 2.0, cy / 2.0 + RandomClamped() * cy / 2.0);
+  Vector2D LeaderSpawnPos = Vector2D(cx / 2.0 + RandomClamped() * cx / 2.0, 
+									cy / 2.0 + RandomClamped() * cy / 2.0);
   LeaderAgent* pLeader = new LeaderAgent(this,
 									  LeaderSpawnPos,           //initial position
 									  RandFloat() * TwoPi,      //start rotation
@@ -63,6 +65,7 @@ GameWorld::GameWorld(int cx, int cy):
 									  Prm.VehicleScale);        //scale)
   m_Vehicles.push_back(pLeader);
   m_pCellSpace->AddEntity(pLeader);
+  m_LeaderAgent = pLeader;
 
   //setup the chasers agents
   for (int a=1; a<Prm.NumAgents; ++a)
@@ -150,7 +153,7 @@ void GameWorld::Update(double time_elapsed)
   //update the vehicles
   for (unsigned int a=0; a<m_Vehicles.size(); ++a)
   {
-    m_Vehicles[a]->Update(time_elapsed);
+    m_Vehicles[a]->Update(time_elapsed, (m_bcontrol==2));
   }
 }
   
@@ -326,6 +329,41 @@ void GameWorld::HandleKeyPresses(WPARAM wParam)
         }
         break;
 
+
+	case VK_LEFT:
+		if (m_bcontrol=1)
+		{
+			Vector2D newHeading = (m_LeaderAgent->Heading() - 0.1 * m_LeaderAgent->Side());
+			m_LeaderAgent->RotateHeadingToFacePosition(m_LeaderAgent->Pos() + newHeading);
+		}
+
+	break;
+
+	case VK_RIGHT:
+		if (m_bcontrol=1)
+		{
+			Vector2D newHeading = (m_LeaderAgent->Heading() + 0.1 * m_LeaderAgent->Side());
+			m_LeaderAgent->RotateHeadingToFacePosition(m_LeaderAgent->Pos() + newHeading);
+		}
+
+	break;
+
+
+	case VK_UP:
+		if (m_bcontrol=1)
+		{
+			m_LeaderAgent->SetVelocity(m_LeaderAgent->Velocity() * 1.1);
+		}
+
+		break;
+
+	case VK_DOWN:
+		if (m_bcontrol=1)
+		{
+			m_LeaderAgent->SetVelocity(m_LeaderAgent->Velocity() * 0.9);
+		}
+
+		break;
   }//end switch
 }
 
@@ -524,6 +562,100 @@ void GameWorld::HandleMenuItems(WPARAM wParam, HWND hwnd)
       }
 
       break;
+
+	  case IDR_LEADER_WANDERING:
+	  {
+		  m_bcontrol = 0;
+		  m_LeaderAgent->Steering()->PursuitOff();
+		  m_LeaderAgent->Steering()->EvadeOff();
+		  m_LeaderAgent->Steering()->FlockingOff();
+		  m_LeaderAgent->Steering()->WanderOn();
+		  for (int i = 1; i < Prm.NumAgents; ++i)
+		  {
+			  m_Vehicles.at(i)->Steering()->OffsetPursuitOff();
+			  m_Vehicles.at(i)->Steering()->EvadeOff();
+			  m_Vehicles.at(i)->Steering()->PursuitOff();
+			  m_Vehicles.at(i)->Steering()->FlockingOff();
+			  m_Vehicles.at(i)->Steering()->OffsetPursuitOn(m_Vehicles.at(i - 1), Vector2D(-25, 0));
+		  }
+		  ChangeMenuState(hwnd, IDR_LEADER_WANDERING, MFS_CHECKED);
+		  ChangeMenuState(hwnd, IDR_V_FLOCKING, MFS_UNCHECKED);
+		  ChangeMenuState(hwnd, IDR_CONTROL_LEADER, MFS_UNCHECKED);
+
+		  ChangeMenuState(hwnd, IDR_WEIGHTED_SUM, MFS_CHECKED);
+		  ChangeMenuState(hwnd, IDR_PRIORITIZED, MFS_UNCHECKED);
+		  ChangeMenuState(hwnd, IDR_DITHERED, MFS_UNCHECKED);
+	  }
+
+	  break;
+
+
+	  case IDR_CONTROL_LEADER:
+	  {
+		    m_bcontrol = 1;
+
+			m_LeaderAgent->Steering()->PursuitOff();
+			m_LeaderAgent->Steering()->EvadeOff();
+			m_LeaderAgent->Steering()->FlockingOff();
+			for (int i =1; i< m_Vehicles.size(); ++i)
+			{
+				m_Vehicles.at(i)->Steering()->OffsetPursuitOff();
+				m_Vehicles.at(i)->Steering()->EvadeOff();
+				m_Vehicles.at(i)->Steering()->PursuitOff();
+				m_Vehicles.at(i)->Steering()->FlockingOff();
+			}
+			if(m_Vehicles.size() >=2)
+			{
+				m_Vehicles.at(1)->Steering()->OffsetPursuitOn(m_LeaderAgent, Vector2D(0, 25));
+				if (m_Vehicles.size() >= 3)
+				{
+					m_Vehicles.at(2)->Steering()->OffsetPursuitOn(m_LeaderAgent, Vector2D(0, -25));
+					if (m_Vehicles.size() >= 4)
+					{
+						m_Vehicles.at(3)->Steering()->OffsetPursuitOn(m_LeaderAgent, Vector2D(25, 0));
+						if (m_Vehicles.size() >= 5)
+						{
+							m_Vehicles.at(4)->Steering()->OffsetPursuitOn(m_LeaderAgent, Vector2D(-25, 0));
+						}
+					}
+				}
+			}
+			for (int i = 5; i < m_Vehicles.size(); ++i)
+			{	//this is to simulate that the other vehicles are scared, and so it seems that the chasers around the leader protect him
+				m_Vehicles.at(i)->Steering()->EvadeOn(m_LeaderAgent);
+			}
+			  
+			//check the menu
+			ChangeMenuState(hwnd, IDR_CONTROL_LEADER, MFS_CHECKED);
+			ChangeMenuState(hwnd, IDR_LEADER_WANDERING, MFS_UNCHECKED);
+			ChangeMenuState(hwnd, IDR_V_FLOCKING, MFS_UNCHECKED);
+
+			ChangeMenuState(hwnd, IDR_WEIGHTED_SUM, MFS_CHECKED);
+			ChangeMenuState(hwnd, IDR_PRIORITIZED, MFS_UNCHECKED);
+			ChangeMenuState(hwnd, IDR_DITHERED, MFS_UNCHECKED);
+	  }
+	  break;
+
+	  
+	  case IDR_V_FLOCKING:
+	  {
+		  m_bcontrol = 2;
+		  for (int i = 0; i < Prm.NumAgents; ++i)
+		  {
+			  m_Vehicles.at(i)->Steering()->WanderOff();
+			  m_Vehicles.at(i)->Steering()->OffsetPursuitOff();
+			  m_Vehicles.at(i)->Steering()->EvadeOff();
+		  }
+		  ChangeMenuState(hwnd, IDR_LEADER_WANDERING, MFS_UNCHECKED);
+		  ChangeMenuState(hwnd, IDR_V_FLOCKING, MFS_CHECKED);
+		  ChangeMenuState(hwnd, IDR_CONTROL_LEADER, MFS_UNCHECKED);
+
+		  ChangeMenuState(hwnd, IDR_WEIGHTED_SUM, MFS_UNCHECKED);
+		  ChangeMenuState(hwnd, IDR_PRIORITIZED, MFS_CHECKED);
+		  ChangeMenuState(hwnd, IDR_DITHERED, MFS_UNCHECKED);
+	  }
+
+	  break;
       
   }//end switch
 }

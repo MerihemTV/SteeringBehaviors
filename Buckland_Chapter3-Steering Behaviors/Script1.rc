@@ -53,6 +53,12 @@ BEGIN
     BEGIN
         MENUITEM "On/Off",                      ID_MENU_SMOOTHING
     END
+	POPUP "Control"
+	BEGIN
+		MENUITEM "Leader Wandering",			IDR_LEADER_WANDERING
+		MENUITEM "Control Leader",				IDR_CONTROL_LEADER
+		MENUITEM "V Flocking",					IDR_V_FLOCKING
+	END
 END
 
 
